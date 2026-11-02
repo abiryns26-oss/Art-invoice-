@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منشئ الفواتير الفنية والتوقيع الرقمي</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #121212; color: #e0e0e0; padding: 20px; margin: 0; }
+        .container { max-width: 650px; margin: auto; background: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.6); border: 1px solid #333; }
+        h2 { color: #d4af37; text-align: center; margin-bottom: 25px; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; color: #b0b0b0; font-size: 14px; }
+        input { width: 100%; padding: 12px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+        input:focus { border-color: #d4af37; outline: none; }
+        .btn-container { display: flex; gap: 10px; margin-top: 20px; }
+        button { background: #d4af37; color: #121212; padding: 12px; flex: 1; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; transition: background 0.3s; }
+        button:hover { background: #e6c555; }
+        button.secondary { background: #2a2a2a; color: #d4af37; border: 1px solid #d4af37; }
+        button.secondary:hover { background: #333; }
+        .result-box { margin-top: 25px; padding: 20px; background: #181818; border-radius: 8px; border-left: 4px solid #d4af37; word-break: break-all; font-family: monospace; font-size: 14px; line-height: 1.6; }
+        .highlight { color: #d4af37; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🎨 فاتورة الأعمال الفنية والتوقيع الرقمي</h2>
+    
+    <div class="form-group">
+        <label>اسم الفنان / المصمم:</label>
+        <input type="text" id="artistName" placeholder="أدخل اسمك أو اسم الاستوديو">
+    </div>
+
+    <div class="form-group">
+        <label>اسم العميل:</label>
+        <input type="text" id="clientName" placeholder="أدخل اسم العميل أو الجهة المستفيدة">
+    </div>
+
+    <div class="form-group">
+        <label>قيمة العمل أو الفاتورة ($):</label>
+        <input type="number" id="amount" placeholder="0.00">
+    </div>
+
+    <div class="btn-container">
+        <button onclick="generateInvoiceWithSignature()">إصدار وتوقيع الفاتورة</button>
+        <button class="secondary" id="downloadBtn" onclick="downloadInvoice()" style="display:none;">تحميل الفاتورة (HTML)</button>
+    </div>
+
+    <div id="output" class="result-box" style="display:none;">
+        <strong>تفاصيل الفاتورة والبصمة الرقمية:</strong><br>
+        <span id="invoiceDataText"></span>
+    </div>
+</div>
+
+<script>
+    let lastGeneratedData = null;
+
+    async function generateSignature(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex;
+    }
+
+    async function generateInvoiceWithSignature() {
+        const artist = document.getElementById('artistName').value.trim();
+        const client = document.getElementById('clientName').value.trim();
+        const amount = document.getElementById('amount').value.trim();
+        const timestamp = new Date().toISOString();
+
+        if (!artist || !client || !amount) {
+            alert('الرجاء إكمال جميع الحقول (اسم الفنان، اسم العميل، والقيمة).');
+            return;
+        }
+
+        const rawData = `Artist:${artist}|Client:${client}|Amount:${amount}|Time:${timestamp}`;
+        const signature = await generateSignature(rawData);
+
+        // تخزين البيانات لتضمينها عند التحميل
+        lastGeneratedData = {
+            artist,
+            client,
+            amount,
+            timestamp,
+            signature
+        };
+
+        const outputDiv = document.getElementById('output');
+        const textSpan = document.getElementById('invoiceDataText');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        outputDiv.style.display = 'block';
+        downloadBtn.style.display = 'block';
+
+        textSpan.innerHTML = `
+            📅 الوقت: ${timestamp}<br>
+            👨‍🎨 الفنان: <span class="highlight">${artist}</span><br>
+            👤 العميل: ${client}<br>
+            💰 القيمة: ${amount}$<br>
+            🔐 <strong>التوقيع الرقمي (Hash):</strong><br>
+            <span class="highlight">${signature}</span>
+        `;
+    }
+
+    function downloadInvoice() {
+        if (!lastGeneratedData) return;
+
+        const htmlContent = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>فاتورة فنية - ${lastGeneratedData.artist}</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #fff; color: #222; padding: 40px; }
+        .invoice-card { max-width: 600px; margin: auto; border: 2px solid #d4af37; padding: 30px; border-radius: 10px; }
+        h1 { color: #d4af37; text-align: center; margin-bottom: 20px; }
+        .row { margin-bottom: 12px; font-size: 16px; }
+        .label { font-weight: bold; color: #555; }
+        .signature { margin-top: 25px; padding: 15px; background: #f9f6ed; border-right: 4px solid #d4af37; font-family: monospace; font-size: 13px; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div class="invoice-card">
+        <h1>فاتورة عمل فني</h1>
+        <div class="row"><span class="label">تاريخ الإصدار:</span> ${lastGeneratedData.timestamp}</div>
+        <div class="row"><span class="label">اسم الفنان:</span> ${lastGeneratedData.artist}</div>
+        <div class="row"><span class="label">اسم العميل:</span> ${lastGeneratedData.client}</div>
+        <div class="row"><span class="label">قيمة العمل:</span> ${lastGeneratedData.amount} $</div>
+        <div class="signature">
+            <strong>التوقيع الرقمي المعتمد (Hash):</strong><br>
+            ${lastGeneratedData.signature}
+        </div>
+    </div>
+</body>
+</html>`;
+
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Invoice-${lastGeneratedData.client.replace(/\s+/g, '_')}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+</script>
+
+</body>
+</html>
